@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
@@ -11,8 +12,8 @@ import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.utils.Array;
-import com.bnana.physics.Const;
+
+import java.io.Console;
 
 /**
  * Created by luca.piccinelli on 20/08/2015.
@@ -42,6 +43,8 @@ public class PhysicsStage extends Stage{
         renderer = new Box2DDebugRenderer();
 
         Gdx.input.setInputProcessor(this);
+
+        body.applyLinearImpulse(new Vector2(1f, 1f), body.getWorldCenter(), true);
     }
 
     private void createElement() {
@@ -52,8 +55,8 @@ public class PhysicsStage extends Stage{
         body = world.createBody(bodyDef);
 
         PolygonShape shape = new PolygonShape();
-        shape.setAsBox(0.5f, 1);
-        body.createFixture(shape, 0.1f);
+        shape.setAsBox(0.5f, 1.25f);
+        body.createFixture(shape, 1);
         //body.setLinearVelocity(2, 5);
 
         shape.dispose();
@@ -66,10 +69,42 @@ public class PhysicsStage extends Stage{
     @Override
     public boolean keyDown(int keycode){
         if(keycode == Input.Keys.W){
-            body.applyForce(new Vector2(0, 2f), body.getWorldCenter(), true);
+            float direction = Math.signum(((int) (body.getAngle() * MathUtils.radiansToDegrees) % 360) + 180);
+            System.out.println(direction);
+            body.applyLinearImpulse(getForwardVelocity(body, direction).nor().scl(10), body.getWorldCenter(), true);
+        }else if (keycode == Input.Keys.A){
+            body.applyTorque(1000f, true);
+        }else if (keycode == Input.Keys.D){
+            body.applyTorque(-1000f , true);
         }
 
         return true;
+    }
+
+    private Vector2 getLateralVelocity(Body _body){
+        Vector2 rightNormal = _body.getWorldVector(new Vector2(1, 0));
+        Vector2 vel = _body.getLinearVelocity();
+        return rightNormal.scl(rightNormal.dot(vel));
+    }
+
+    private Vector2 getForwardVelocity(Body _body, float direction){
+        Vector2 forwardNormal = _body.getWorldVector(new Vector2(0, direction));
+        Vector2 vel = _body.getLinearVelocity();
+        return forwardNormal.scl(forwardNormal.dot(vel));
+    }
+
+    private void updateFriction(Body _body){
+        Vector2 impulse = getLateralVelocity(_body).scl(-_body.getMass());
+        float max = 0.5f;
+        if(impulse.len() > max){
+            impulse = impulse.scl(max / impulse.len());
+        }
+        _body.applyLinearImpulse(impulse, _body.getWorldCenter(), true);
+
+        _body.applyAngularImpulse(0.05f * _body.getInertia() * -_body.getAngularVelocity(), true);
+
+        float direction = Math.signum(((int) (body.getAngle() * MathUtils.radiansToDegrees) % 360) + 180);
+        _body.applyForce(getForwardVelocity(body, direction).scl(-2f), _body.getWorldCenter(), true);
     }
 
     @Override
@@ -84,6 +119,7 @@ public class PhysicsStage extends Stage{
 
         accumulator += delta;
 
+        updateFriction(body);
         while (accumulator >= delta){
             world.step(TIME_STEP, 6, 2);
             accumulator -= TIME_STEP;
