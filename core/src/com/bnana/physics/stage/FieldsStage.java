@@ -17,6 +17,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 public class FieldsStage extends Stage{
     private final float TIME_STEP = 1 / 300f;
     private final Box2DDebugRenderer renderer;
+    private final Body body3;
     SpriteBatch batch;
     OrthographicCamera camera;
     private World world;
@@ -32,6 +33,7 @@ public class FieldsStage extends Stage{
         createWorld();
         body1 = createElement(5, 5);
         body2 = createElement(10, 10);
+        body3 = createElement(8, 12, 2f);
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 40, 26);
@@ -43,7 +45,11 @@ public class FieldsStage extends Stage{
         Gdx.input.setInputProcessor(this);
     }
 
-    private Body createElement(int x, int y) {
+    private Body createElement(int x, int y){
+        return createElement(x, y, 1);
+    }
+
+    private Body createElement(int x, int y, float mass){
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
         bodyDef.position.set(x, y);
@@ -52,7 +58,7 @@ public class FieldsStage extends Stage{
 
         CircleShape shape = new CircleShape();
         shape.setRadius(1);
-        body.createFixture(shape, 1);
+        body.createFixture(shape, mass);
         //body.setLinearVelocity(2, 5);
 
         shape.dispose();
@@ -64,11 +70,9 @@ public class FieldsStage extends Stage{
         Vector2 p1 = b1.getWorldCenter();
         Vector2 p2 = b2.getWorldCenter();
         float dist = p2.dst(p1);
-        dist = dist > 2 ? dist : 0;
-        if(dist > 0){
-            Vector2 force = p1.sub(p2).scl(1 / dist);
-            b2.applyForceToCenter(force, true);
-        }
+
+        Vector2 force = p1.sub(p2).scl(1 / dist).scl(b1.getMass() * 10);
+        b2.applyForceToCenter(force, true);
     }
 
     private void createWorld() {
@@ -88,6 +92,7 @@ public class FieldsStage extends Stage{
         accumulator += delta;
 
         attract(body1, body2);
+        attract(body3, body2);
         while (accumulator >= delta){
             world.step(TIME_STEP, 6, 2);
             accumulator -= TIME_STEP;

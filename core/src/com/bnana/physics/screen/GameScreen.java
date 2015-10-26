@@ -15,7 +15,7 @@ public class GameScreen implements Screen {
     private final Stage stage;
 
     public GameScreen(Physics physics) {
-        this.stage = new FieldsStage();
+        this.stage = new PhysicsStage();
     }
 
     @Override
