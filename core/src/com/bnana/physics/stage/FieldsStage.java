@@ -8,7 +8,13 @@ import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.CircleShape;
+import com.badlogic.gdx.physics.box2d.Fixture;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.Joint;
+import com.badlogic.gdx.physics.box2d.PolygonShape;
+import com.badlogic.gdx.physics.box2d.Shape;
 import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.physics.box2d.joints.DistanceJointDef;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 
 /**
@@ -41,7 +47,58 @@ public class FieldsStage extends Stage{
         renderer = new Box2DDebugRenderer();
 
         Gdx.input.setInputProcessor(this);
+
+        createChain();
+
+        /*attract(body1, body2);
+        attract(body2, body1);*/
     }
+
+
+
+    private void createChain(){
+        Body chainStart = createChainElement(BodyDef.BodyType.StaticBody, 15, 15);
+        Body chain1 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 20);
+        Body chainEnd = createElement(15, 25);
+
+        createJoint(chainStart, chain1);
+        createJoint(chain1, chainEnd);
+
+        chainEnd.applyLinearImpulse(new Vector2(5, 0), chainEnd.getWorldCenter(), true);
+    }
+
+    private void createJoint(Body a, Body b){
+        DistanceJointDef jointDef = new DistanceJointDef();
+        Vector2 anchorA = a.getWorldCenter();
+        Vector2 anchorB = b.getWorldCenter();
+
+        jointDef.initialize(a, b, anchorA, anchorB);
+        jointDef.collideConnected = false;
+
+        Joint joint = world.createJoint(jointDef);
+    }
+
+    private Body createChainElement(BodyDef.BodyType bodyType, int x, int y) {
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = bodyType;
+        bodyDef.position.set(x, y);
+
+        Body body = world.createBody(bodyDef);
+
+        PolygonShape shape = new PolygonShape();
+        shape.setAsBox(0.5f, 1);
+        FixtureDef fixtureDef = new FixtureDef();
+        fixtureDef.density = 1;
+        fixtureDef.shape = shape;
+
+        body.createFixture(fixtureDef);
+        body.resetMassData();
+
+        shape.dispose();
+
+        return body;
+    }
+
 
     private Body createElement(int x, int y) {
         BodyDef bodyDef = new BodyDef();
@@ -53,7 +110,6 @@ public class FieldsStage extends Stage{
         CircleShape shape = new CircleShape();
         shape.setRadius(1);
         body.createFixture(shape, 1);
-        //body.setLinearVelocity(2, 5);
 
         shape.dispose();
 
@@ -65,10 +121,10 @@ public class FieldsStage extends Stage{
         Vector2 p2 = b2.getWorldCenter();
         float dist = p2.dst(p1);
         dist = dist > 2 ? dist : 0;
-        if(dist > 0){
-            Vector2 force = p1.sub(p2).scl(1 / dist);
+//        if(dist > 0){
+            Vector2 force = p1.sub(p2).scl(1000 / dist);
             b2.applyForceToCenter(force, true);
-        }
+//        }
     }
 
     private void createWorld() {
@@ -87,7 +143,6 @@ public class FieldsStage extends Stage{
 
         accumulator += delta;
 
-        attract(body1, body2);
         while (accumulator >= delta){
             world.step(TIME_STEP, 6, 2);
             accumulator -= TIME_STEP;
