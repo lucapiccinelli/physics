@@ -15,6 +15,8 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.Shape;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.physics.box2d.joints.DistanceJointDef;
+import com.badlogic.gdx.physics.box2d.joints.RopeJoint;
+import com.badlogic.gdx.physics.box2d.joints.RopeJointDef;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 
 /**
@@ -60,13 +62,19 @@ public class FieldsStage extends Stage{
 
     private void createChain(){
         Body chainStart = createChainElement(BodyDef.BodyType.StaticBody, 15, 15);
-        Body chain1 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 20);
-        Body chainEnd = createElement(15, 25);
+        Body chain1 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 15.2f);
+        Body chain2 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 15.4f);
+        Body chain3 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 15.6f);
+        Body chain4 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 15.8f);
+        Body chainEnd = createChainElement(BodyDef.BodyType.DynamicBody, 15, 16.0f);
 
         createJoint(chainStart, chain1);
-        createJoint(chain1, chainEnd);
+        createJoint(chain1, chain2);
+        createJoint(chain2, chain3);
+        createJoint(chain3, chain4);
+        createJoint(chain4, chainEnd);
 
-        chainEnd.applyLinearImpulse(new Vector2(5, 0), chainEnd.getWorldCenter(), true);
+        chainEnd.applyLinearImpulse(new Vector2(0.1f, 0), chainEnd.getWorldCenter(), true);
     }
 
     private void createJoint(Body a, Body b){
@@ -76,19 +84,29 @@ public class FieldsStage extends Stage{
 
         jointDef.initialize(a, b, anchorA, anchorB);
         jointDef.collideConnected = false;
+        jointDef.dampingRatio = 0;
+        jointDef.frequencyHz = 0;
+        world.createJoint(jointDef);
 
-        Joint joint = world.createJoint(jointDef);
+        RopeJointDef ropeJointDef = new RopeJointDef();
+        ropeJointDef.maxLength = 0.4f;
+        ropeJointDef.localAnchorA.set(0, 0);
+        ropeJointDef.localAnchorB.set(0, 0);
+        ropeJointDef.bodyA = a;
+        ropeJointDef.bodyB = b;
+        world.createJoint(ropeJointDef);
     }
 
-    private Body createChainElement(BodyDef.BodyType bodyType, int x, int y) {
+    private Body createChainElement(BodyDef.BodyType bodyType, float x, float y) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = bodyType;
         bodyDef.position.set(x, y);
+        bodyDef.fixedRotation = false;
 
         Body body = world.createBody(bodyDef);
 
-        PolygonShape shape = new PolygonShape();
-        shape.setAsBox(0.5f, 1);
+        CircleShape shape = new CircleShape();
+        shape.setRadius(0.1f);
         FixtureDef fixtureDef = new FixtureDef();
         fixtureDef.density = 1;
         fixtureDef.shape = shape;
