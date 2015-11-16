@@ -3,6 +3,7 @@ package com.bnana.physics.stage;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
@@ -18,6 +19,7 @@ import com.badlogic.gdx.physics.box2d.joints.DistanceJointDef;
 import com.badlogic.gdx.physics.box2d.joints.RopeJoint;
 import com.badlogic.gdx.physics.box2d.joints.RopeJointDef;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.utils.Array;
 
 /**
  * Created by luca.piccinelli on 20/08/2015.
@@ -25,23 +27,25 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 public class FieldsStage extends Stage{
     private final float TIME_STEP = 1 / 300f;
     private final Box2DDebugRenderer renderer;
-    private final Body body3;
+    private Body body3;
     SpriteBatch batch;
     OrthographicCamera camera;
     private World world;
     private float accumulator;
     private Body body1;
     private final Body body2;
+    private final float radius;
 
     public FieldsStage(){
         accumulator = 0;
+        radius = 0.1f;
 
         batch = new SpriteBatch();
 
         createWorld();
-        body1 = createElement(5, 5);
-        body2 = createElement(10, 10);
-        body3 = createElement(8, 12, 2f);
+        body1 = createElement(15, 15);
+        body2 = createElement(17, 15);
+        //body3 = createElement(8, 12, 2f);
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 40, 26);
@@ -58,15 +62,36 @@ public class FieldsStage extends Stage{
         attract(body2, body1);*/
     }
 
-
+    private Vector2 nextTo(Vector2 position, Vector2 positionToSet){
+        return positionToSet.set(position.x, position.y + radius * 2);
+    }
 
     private void createChain(){
-        Body chainStart = createChainElement(BodyDef.BodyType.StaticBody, 15, 15);
-        Body chain1 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 15.2f);
-        Body chain2 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 15.4f);
-        Body chain3 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 15.6f);
-        Body chain4 = createChainElement(BodyDef.BodyType.DynamicBody, 15, 15.8f);
-        Body chainEnd = createChainElement(BodyDef.BodyType.DynamicBody, 15, 16.0f);
+        Array<Body> chains = new Array<Body>();
+
+        float circleRadius = 1.5f;
+        Vector2 offSet = new Vector2(16, 15);
+        for (int i = 0; i < 360; i+=20){
+            float x = offSet.x +  MathUtils.cosDeg(i) * circleRadius;
+            float y = offSet.y + MathUtils.sinDeg(i) * circleRadius;
+
+            chains.add(createChainElement(BodyDef.BodyType.DynamicBody, x, y));
+        }
+
+        for (int i = 0; i < chains.size; i++){
+            createJoint(chains.get(i), chains.get((i + 1) % chains.size));
+        }
+
+        body1.applyLinearImpulse(new Vector2(-1f, -1f), body1.getWorldCenter(), true);
+        body2.applyLinearImpulse(new Vector2(1f, 1f), body1.getWorldCenter(), true);
+
+        /*Body chainStart =
+        Body chain1 = createChainElement(BodyDef.BodyType.DynamicBody, chainStart.getPosition());
+        Body chain2 = createChainElement(BodyDef.BodyType.DynamicBody, chain1.getPosition());
+        Body chain3 = createChainElement(BodyDef.BodyType.DynamicBody, chain2.getPosition());
+        Body chain4 = createChainElement(BodyDef.BodyType.DynamicBody, chain3.getPosition());
+        Body chain5 = createChainElement(BodyDef.BodyType.DynamicBody, chain3.getPosition());
+        Body chainEnd = createChainElement(BodyDef.BodyType.DynamicBody, chain4.getPosition());
 
         createJoint(chainStart, chain1);
         createJoint(chain1, chain2);
@@ -74,7 +99,7 @@ public class FieldsStage extends Stage{
         createJoint(chain3, chain4);
         createJoint(chain4, chainEnd);
 
-        chainEnd.applyLinearImpulse(new Vector2(0.1f, 0), chainEnd.getWorldCenter(), true);
+        chainEnd.applyLinearImpulse(new Vector2(0f, 5f), chainEnd.getWorldCenter(), true);*/
     }
 
     private void createJoint(Body a, Body b){
@@ -83,13 +108,13 @@ public class FieldsStage extends Stage{
         Vector2 anchorB = b.getWorldCenter();
 
         jointDef.initialize(a, b, anchorA, anchorB);
-        jointDef.collideConnected = false;
+        jointDef.collideConnected = true;
         jointDef.dampingRatio = 0;
-        jointDef.frequencyHz = 0;
+        jointDef.frequencyHz = 0.5f;
         world.createJoint(jointDef);
 
         RopeJointDef ropeJointDef = new RopeJointDef();
-        ropeJointDef.maxLength = 0.4f;
+        ropeJointDef.maxLength = radius * 15f;
         ropeJointDef.localAnchorA.set(0, 0);
         ropeJointDef.localAnchorB.set(0, 0);
         ropeJointDef.bodyA = a;
@@ -106,7 +131,7 @@ public class FieldsStage extends Stage{
         Body body = world.createBody(bodyDef);
 
         CircleShape shape = new CircleShape();
-        shape.setRadius(0.1f);
+        shape.setRadius(radius);
         FixtureDef fixtureDef = new FixtureDef();
         fixtureDef.density = 1;
         fixtureDef.shape = shape;
